@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+
+{% block start %}
+<div class="container mt-5">
+    <div class="col-6 mx-auto">
+        <h2>Task List</h2>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#exampleModal">
+            Create Task
+        </button>
+        <div id="task"></div>
+    </div>
+</div>
+
+<!-- Create Task Modal -->
+<div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h1 class="modal-title fs-5" id="exampleModalLabel">Create Task</h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="task_name">Task Name:</label>
+                    <input type="text" id="task_name" class="form-control">
+                </div>
+                <div class="form-group mt-1">
+                    <label for="priority_level">Priority level:</label>
+                    <select id="priority_level" class="form-select">
+                        <option selected>Select</option>
+                        <option value="Low">Low</option>
+                        <option value="Medium">Medium</option>
+                        <option value="High">High</option>
+                    </select>
+                </div>
+                <div class="form-group mt-1">
+                    <label for="due_date">Due Date:</label>
+                    <input type="date" id="due_date" class="form-control">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="createTask()">Save changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Update Task Modal -->
+<div class="modal fade" id="updateModal" tabindex="-1" aria-labelledby="updateModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h1 class="modal-title fs-5" id="updateModalLabel">Update Task</h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="update_task_name">Task Name:</label>
+                    <input type="text" id="update_task_name" class="form-control">
+                </div>
+                <div class="form-group mt-1">
+                    <label for="update_priority_level">Priority level:</label>
+                    <select id="update_priority_level" class="form-select">
+                        <option selected>Select</option>
+                        <option value="Low">Low</option>
+                        <option value="Medium">Medium</option>
+                        <option value="High">High</option>
+                    </select>
+                </div>
+                <div class="form-group mt-1">
+                    <label for="update_due_date">Due Date:</label>
+                    <input type="date" id="update_due_date" class="form-control">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="updateTask()">Update</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentTaskId = null;
+
+    function deleteTask(uid) {
+        const data = { uid };
+        axios.delete('/api/task/', { data })
+            .then(response => {
+                console.log(response);
+                fetchTask();
+            })
+            .catch(error => console.error(error));
+    }
+
+    function renderUI(tasks) {
+        let html = '';
+        tasks.forEach(task => {
+            html += `<div class="card mt-4">
+                <div class="card-body">
+                    ${task.task_name}
+                    <button onclick="editTask('${task.uid}')" class="btn btn-warning text-right mx-2">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button onclick="deleteTask('${task.uid}')" class="btn btn-danger text-right">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                    <br>
+                    <small>Due Date: ${task.due_date}</small>
+                    <span class="badge text-bg-primary">${task.priority_level}</span>
+                </div>
+            </div>`;
+        });
+        document.getElementById('task').innerHTML = html;
+    }
+
+    function fetchTask() {
+        axios.get('/api/task/')
+            .then(response => renderUI(response.data))
+            .catch(error => console.error(error));
+    }
+
+    function createTask() {
+        const task_name = document.getElementById('task_name').value;
+        const priority_level = document.getElementById('priority_level').value;
+        const due_date = document.getElementById('due_date').value;
+
+        if (!task_name) {
+            alert("Task name is required");
+            return;
+        }
+
+        const data = { task_name, priority_level, due_date };
+        axios.post('/api/task/', data)
+            .then(response => {
+                alert("Task Created");
+                window.location.reload();
+            })
+            .catch(error => console.error(error));
+    }
+
+    function editTask(uid) {
+        currentTaskId = uid;
+        axios.get(`/api/task/${uid}/`)
+            .then(response => {
+                const task = response.data;
+                document.getElementById('update_task_name').value = task.task_name;
+                document.getElementById('update_priority_level').value = task.priority_level;
+                document.getElementById('update_due_date').value = task.due_date;
+                const updateModal = new bootstrap.Modal(document.getElementById('updateModal'));
+                updateModal.show();
+            })
+            .catch(error => console.error(error));
+    }
+
+    function updateTask() {
+        const task_name = document.getElementById('update_task_name').value;
+        const priority_level = document.getElementById('update_priority_level').value;
+        const due_date = document.getElementById('update_due_date').value;
+
+        if (!task_name) {
+            alert("Task name is required");
+            return;
+        }
+
+        const data = { task_name, priority_level, due_date };
+        axios.put(`/api/task/${currentTaskId}/`, data)
+            .then(response => {
+                alert("Task Updated");
+                window.location.reload();
+            })
+            .catch(error => console.error(error));
+    }
+
+    fetchTask();
+</script>
+{% endblock %}
